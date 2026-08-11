@@ -1,0 +1,15 @@
+{
+  "name": "deviceops-automations",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "contracts:check": "node --import tsx scripts/check-contract-sync.ts",
+    "verify": "npm run contracts:check"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}
