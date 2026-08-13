@@ -12,7 +12,7 @@
       "webhookId": "9743471f-cc3b-4242-bfdd-b197df86c8d1"
     },
     {
-      "parameters": { "jsCode": "const crypto = require('crypto');\nconst body = $input.item.json.body;\nconst secret = $vars.N8N_WEBHOOK_SECRET;\nif (!secret) throw new Error('N8N_WEBHOOK_SECRET variable is not configured');\nif (Math.abs(Math.floor(Date.now() / 1000) - body.timestamp) > 300) throw new Error('Webhook timestamp expired');\nconst expected = crypto.createHmac('sha256', secret).update(`${body.timestamp}.${body.nonce}.${body.payloadBase64}`).digest('hex');\nif (expected !== body.signature) throw new Error('Webhook signature invalid');\nconst payload = JSON.parse(Buffer.from(body.payloadBase64, 'base64url').toString('utf8'));\nif (!payload.incidentId) throw new Error('incidentId is required');\nreturn [{ json: { ...body, payload } }];" },
+      "parameters": { "jsCode": "const crypto = require('crypto');\nconst body = $input.item.json.body;\nconst secret = $vars.N8N_WEBHOOK_SECRET;\nif (!secret) throw new Error('N8N_WEBHOOK_SECRET variable is not configured');\nif (!body.deliveryId || !body.nonce || !body.payloadBase64 || !body.signature) throw new Error('deliveryId, nonce, payloadBase64, and signature are required');\nif (Math.abs(Math.floor(Date.now() / 1000) - body.timestamp) > 300) throw new Error('Webhook timestamp expired');\nconst expected = crypto.createHmac('sha256', secret).update(`${body.timestamp}.${body.nonce}.${body.payloadBase64}`).digest('hex');\nconst expectedBuffer = Buffer.from(expected, 'hex');\nconst receivedBuffer = Buffer.from(body.signature, 'hex');\nif (expectedBuffer.length !== receivedBuffer.length || !crypto.timingSafeEqual(expectedBuffer, receivedBuffer)) throw new Error('Webhook signature invalid');\nconst replay = $getWorkflowStaticData('global');\nreplay.deliveries ??= {};\nreplay.nonces ??= {};\nconst cutoff = Date.now() - 15 * 60 * 1000;\nfor (const [key, value] of Object.entries(replay.deliveries)) if (value < cutoff) delete replay.deliveries[key];\nfor (const [key, value] of Object.entries(replay.nonces)) if (value < cutoff) delete replay.nonces[key];\nif (replay.deliveries[body.deliveryId] || replay.nonces[body.nonce]) return [];\nreplay.deliveries[body.deliveryId] = Date.now();\nreplay.nonces[body.nonce] = Date.now();\nconst payload = JSON.parse(Buffer.from(body.payloadBase64, 'base64url').toString('utf8'));\nif (!payload.incidentId) throw new Error('incidentId is required');\nreturn [{ json: { ...body, payload } }];" },
       "id": "adb18c1c-2776-47ab-ba44-5dd7bf5c986e",
       "name": "Verify HMAC and Replay Window",
       "type": "n8n-nodes-base.code",
@@ -20,12 +20,28 @@
       "position": [460, 300]
     },
     {
+      "parameters": { "method": "POST", "url": "={{ $vars.DEVICEOPS_CORE_URL || 'http://host.docker.internal:3000' }}/api/v1/webhooks/n8n/incident", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ { deliveryId: $json.deliveryId, timestamp: $json.timestamp, nonce: $json.nonce, payloadBase64: $json.payloadBase64, signature: $json.signature } }}" },
+      "id": "9cce845d-915e-4cd9-8b34-2355c5a125f2",
+      "name": "Register Delivery In Core",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 300]
+    },
+    {
+      "parameters": { "jsCode": "const source = $('Verify HMAC and Replay Window').item.json;\nif ($json.duplicate === true) return [];\nreturn [{ json: source }];" },
+      "id": "b21d2f6c-7f50-4d10-94d8-1c4f8b1d54c3",
+      "name": "Drop Duplicate Delivery",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
       "parameters": { "method": "POST", "url": "={{ $vars.MAILPIT_API_URL || 'http://host.docker.internal:8025/api/v1/send' }}", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ { From: { Email: 'notifications@deviceops.local' }, To: [{ Email: 'oncall-team@deviceops.local' }], Subject: '[DeviceOps Incident] ' + $json.payload.summary, Text: 'Incident ' + $json.payload.incidentId + '\\n\\n' + $json.payload.summary + '\\n\\nReview the incident in the core application.' } }}" },
       "id": "72ab5be6-0d00-4dda-b9b2-15cfaad53f0b",
       "name": "Mailpit Notification",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [680, 300]
+      "position": [1120, 300]
     },
     {
       "parameters": { "jsCode": "const crypto = require('crypto');\nconst secret = $vars.N8N_WEBHOOK_SECRET;\nif (!secret) throw new Error('N8N_WEBHOOK_SECRET variable is not configured');\nconst source = $('Verify HMAC and Replay Window').item.json;\nconst payloadBase64 = Buffer.from(JSON.stringify({ incidentId: source.payload.incidentId, status: 'delivered' })).toString('base64url');\nconst timestamp = Math.floor(Date.now() / 1000);\nconst nonce = crypto.randomBytes(16).toString('hex');\nconst signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${nonce}.${payloadBase64}`).digest('hex');\nreturn [{ json: { deliveryId: source.deliveryId, timestamp, nonce, payloadBase64, signature, payload: { incidentId: source.payload.incidentId, status: 'delivered' } } }];" },
@@ -33,7 +49,7 @@
       "name": "Build Signed Acknowledgement",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 300]
+      "position": [1340, 300]
     },
     {
       "parameters": { "method": "POST", "url": "={{ $vars.DEVICEOPS_CORE_URL || 'http://host.docker.internal:3000' }}/api/v1/webhooks/n8n/ack", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ { deliveryId: $json.deliveryId, timestamp: $json.timestamp, nonce: $json.nonce, payloadBase64: $json.payloadBase64, signature: $json.signature } }}" },
@@ -41,12 +57,14 @@
       "name": "Acknowledge Core Incident",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1120, 300]
+      "position": [1560, 300]
     }
   ],
   "connections": {
     "Signed Incident Webhook": { "main": [[{ "node": "Verify HMAC and Replay Window", "type": "main", "index": 0 }]] },
-    "Verify HMAC and Replay Window": { "main": [[{ "node": "Mailpit Notification", "type": "main", "index": 0 }]] },
+    "Verify HMAC and Replay Window": { "main": [[{ "node": "Register Delivery In Core", "type": "main", "index": 0 }]] },
+    "Register Delivery In Core": { "main": [[{ "node": "Drop Duplicate Delivery", "type": "main", "index": 0 }]] },
+    "Drop Duplicate Delivery": { "main": [[{ "node": "Mailpit Notification", "type": "main", "index": 0 }]] },
     "Mailpit Notification": { "main": [[{ "node": "Build Signed Acknowledgement", "type": "main", "index": 0 }]] },
     "Build Signed Acknowledgement": { "main": [[{ "node": "Acknowledge Core Incident", "type": "main", "index": 0 }]] }
   },
