@@ -4,34 +4,40 @@
   "nodes": [
     {
       "parameters": { "httpMethod": "POST", "path": "incident-envelope", "responseMode": "onReceived" },
+      "id": "9743471f-cc3b-4242-bfdd-b197df86c8d1",
       "name": "Signed Incident Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 300]
+      "position": [240, 300],
+      "webhookId": "9743471f-cc3b-4242-bfdd-b197df86c8d1"
     },
     {
-      "parameters": { "jsCode": "const crypto = require('crypto');\nconst body = $input.item.json.body;\nconst secret = process.env.N8N_WEBHOOK_SECRET;\nif (!secret) throw new Error('N8N_WEBHOOK_SECRET is not configured');\nif (Math.abs(Math.floor(Date.now() / 1000) - body.timestamp) > 300) throw new Error('Webhook timestamp expired');\nconst expected = crypto.createHmac('sha256', secret).update(`${body.timestamp}.${body.nonce}.${body.payloadBase64}`).digest('hex');\nif (expected !== body.signature) throw new Error('Webhook signature invalid');\nconst payload = JSON.parse(Buffer.from(body.payloadBase64, 'base64url').toString('utf8'));\nif (!payload.incidentId) throw new Error('incidentId is required');\nreturn [{ json: { ...body, payload } }];" },
+      "parameters": { "jsCode": "const crypto = require('crypto');\nconst body = $input.item.json.body;\nconst secret = $vars.N8N_WEBHOOK_SECRET;\nif (!secret) throw new Error('N8N_WEBHOOK_SECRET variable is not configured');\nif (Math.abs(Math.floor(Date.now() / 1000) - body.timestamp) > 300) throw new Error('Webhook timestamp expired');\nconst expected = crypto.createHmac('sha256', secret).update(`${body.timestamp}.${body.nonce}.${body.payloadBase64}`).digest('hex');\nif (expected !== body.signature) throw new Error('Webhook signature invalid');\nconst payload = JSON.parse(Buffer.from(body.payloadBase64, 'base64url').toString('utf8'));\nif (!payload.incidentId) throw new Error('incidentId is required');\nreturn [{ json: { ...body, payload } }];" },
+      "id": "adb18c1c-2776-47ab-ba44-5dd7bf5c986e",
       "name": "Verify HMAC and Replay Window",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [460, 300]
     },
     {
-      "parameters": { "fromEmail": "notifications@deviceops.local", "toEmail": "oncall-team@deviceops.local", "subject": "=[DeviceOps Incident] {{ $json.payload.summary }}", "text": "=Incident {{ $json.payload.incidentId }}\n\n{{ $json.payload.summary }}\n\nReview the incident in the core application." },
+      "parameters": { "method": "POST", "url": "={{ $vars.MAILPIT_API_URL || 'http://host.docker.internal:8025/api/v1/send' }}", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ { From: { Email: 'notifications@deviceops.local' }, To: [{ Email: 'oncall-team@deviceops.local' }], Subject: '[DeviceOps Incident] ' + $json.payload.summary, Text: 'Incident ' + $json.payload.incidentId + '\\n\\n' + $json.payload.summary + '\\n\\nReview the incident in the core application.' } }}" },
+      "id": "72ab5be6-0d00-4dda-b9b2-15cfaad53f0b",
       "name": "Mailpit Notification",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
       "position": [680, 300]
     },
     {
-      "parameters": { "jsCode": "const crypto = require('crypto');\nconst secret = process.env.N8N_WEBHOOK_SECRET;\nif (!secret) throw new Error('N8N_WEBHOOK_SECRET is not configured');\nconst payloadBase64 = Buffer.from(JSON.stringify({ incidentId: $json.payload.incidentId, status: 'delivered' })).toString('base64url');\nconst timestamp = Math.floor(Date.now() / 1000);\nconst nonce = crypto.randomBytes(16).toString('hex');\nconst signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${nonce}.${payloadBase64}`).digest('hex');\nreturn [{ json: { deliveryId: $json.deliveryId, timestamp, nonce, payloadBase64, signature, payload: { incidentId: $json.payload.incidentId, status: 'delivered' } } }];" },
+      "parameters": { "jsCode": "const crypto = require('crypto');\nconst secret = $vars.N8N_WEBHOOK_SECRET;\nif (!secret) throw new Error('N8N_WEBHOOK_SECRET variable is not configured');\nconst source = $('Verify HMAC and Replay Window').item.json;\nconst payloadBase64 = Buffer.from(JSON.stringify({ incidentId: source.payload.incidentId, status: 'delivered' })).toString('base64url');\nconst timestamp = Math.floor(Date.now() / 1000);\nconst nonce = crypto.randomBytes(16).toString('hex');\nconst signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${nonce}.${payloadBase64}`).digest('hex');\nreturn [{ json: { deliveryId: source.deliveryId, timestamp, nonce, payloadBase64, signature, payload: { incidentId: source.payload.incidentId, status: 'delivered' } } }];" },
+      "id": "7cf3a4fa-f0f0-4de8-b597-96a5643e5e68",
       "name": "Build Signed Acknowledgement",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [900, 300]
     },
     {
-      "parameters": { "method": "POST", "url": "={{ $env.DEVICEOPS_CORE_URL || 'http://host.docker.internal:3000' }}/api/v1/webhooks/n8n/ack", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ { deliveryId: $json.deliveryId, timestamp: $json.timestamp, nonce: $json.nonce, payloadBase64: $json.payloadBase64, signature: $json.signature } }}" },
+      "parameters": { "method": "POST", "url": "={{ $vars.DEVICEOPS_CORE_URL || 'http://host.docker.internal:3000' }}/api/v1/webhooks/n8n/ack", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ { deliveryId: $json.deliveryId, timestamp: $json.timestamp, nonce: $json.nonce, payloadBase64: $json.payloadBase64, signature: $json.signature } }}" },
+      "id": "d6f6aeea-4c65-4d5d-bc2f-4632c48b66a7",
       "name": "Acknowledge Core Incident",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,

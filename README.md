@@ -13,7 +13,9 @@ This repository contains version-controlled n8n workflows that handle external i
 4. Posting a signed acknowledgement back to core `/api/v1/webhooks/n8n/ack`.
 5. Error handling and dead-letter routing for transient notification failures.
 
-The exported workflow is an importable contract, not a hosted production service. Configure `N8N_WEBHOOK_SECRET`, Mailpit SMTP, and the core API URL as n8n credentials/environment values. The workflow must never contain a fallback secret or credentials in JSON.
+The exported workflow is an importable contract, not a hosted production service. After importing, configure these n8n project variables (or equivalent secret-backed variables): `N8N_WEBHOOK_SECRET`, `MAILPIT_API_URL` (for example, `http://host.docker.internal:8025/api/v1/send`), and `DEVICEOPS_CORE_URL` (for example, `http://host.docker.internal:3000`). The workflow uses `$vars` rather than unrestricted process environment access, which is compatible with n8n v2 task-runner restrictions. The workflow must never contain a fallback secret or credentials in JSON.
+
+For the local Compose stack, set the same secret in `N8N_WEBHOOK_SECRET` before starting n8n, then create the three variables in the n8n UI or through your deployment automation. The signed envelope must use a UUID `deliveryId`, a timestamp within five minutes, a unique nonce, and an HMAC-SHA256 signature over `timestamp.nonce.payloadBase64`. Test the production webhook URL only after the workflow is active; the test URL is a separate n8n endpoint.
 
 ## Contract Synchronization
 
