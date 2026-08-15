@@ -20,7 +20,7 @@
       "position": [460, 300]
     },
     {
-      "parameters": { "method": "POST", "url": "={{ $vars.DEVICEOPS_CORE_URL || 'http://host.docker.internal:3000' }}/api/v1/webhooks/n8n/incident", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ { deliveryId: $json.deliveryId, timestamp: $json.timestamp, nonce: $json.nonce, payloadBase64: $json.payloadBase64, signature: $json.signature } }}" },
+      "parameters": { "method": "POST", "url": "={{ $vars.DEVICEOPS_CORE_URL }}/api/v1/webhooks/n8n/incident", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ { deliveryId: $json.deliveryId, timestamp: $json.timestamp, nonce: $json.nonce, payloadBase64: $json.payloadBase64, signature: $json.signature } }}" },
       "id": "9cce845d-915e-4cd9-8b34-2355c5a125f2",
       "name": "Register Delivery In Core",
       "type": "n8n-nodes-base.httpRequest",
@@ -36,7 +36,7 @@
       "position": [900, 300]
     },
     {
-      "parameters": { "method": "POST", "url": "={{ $vars.MAILPIT_API_URL || 'http://host.docker.internal:8025/api/v1/send' }}", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ { From: { Email: 'notifications@deviceops.local' }, To: [{ Email: 'oncall-team@deviceops.local' }], Subject: '[DeviceOps Incident] ' + $json.payload.summary, Text: 'Incident ' + $json.payload.incidentId + '\\n\\n' + $json.payload.summary + '\\n\\nReview the incident in the core application.' } }}" },
+      "parameters": { "method": "POST", "url": "={{ $vars.MAILPIT_API_URL }}", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ { From: { Email: $vars.ALERT_FROM }, To: [{ Email: $vars.ALERT_RECIPIENT }], Subject: '[DeviceOps Incident] ' + $json.payload.summary, Text: 'Incident ' + $json.payload.incidentId + '\\n\\n' + $json.payload.summary + '\\n\\nReview the incident in the core application.' } }}" },
       "id": "72ab5be6-0d00-4dda-b9b2-15cfaad53f0b",
       "name": "Mailpit Notification",
       "type": "n8n-nodes-base.httpRequest",
@@ -52,7 +52,7 @@
       "position": [1340, 300]
     },
     {
-      "parameters": { "method": "POST", "url": "={{ $vars.DEVICEOPS_CORE_URL || 'http://host.docker.internal:3000' }}/api/v1/webhooks/n8n/ack", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ { deliveryId: $json.deliveryId, timestamp: $json.timestamp, nonce: $json.nonce, payloadBase64: $json.payloadBase64, signature: $json.signature } }}" },
+      "parameters": { "method": "POST", "url": "={{ $vars.DEVICEOPS_CORE_URL }}/api/v1/webhooks/n8n/ack", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ { deliveryId: $json.deliveryId, timestamp: $json.timestamp, nonce: $json.nonce, payloadBase64: $json.payloadBase64, signature: $json.signature } }}" },
       "id": "d6f6aeea-4c65-4d5d-bc2f-4632c48b66a7",
       "name": "Acknowledge Core Incident",
       "type": "n8n-nodes-base.httpRequest",
