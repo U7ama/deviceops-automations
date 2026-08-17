@@ -58,6 +58,22 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [1560, 300]
+    },
+    {
+      "parameters": {},
+      "id": "e8a1c3d5-9f2b-4e7a-b6d0-1c3e5f7a9b2d",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [680, 520]
+    },
+    {
+      "parameters": { "jsCode": "const execution = $input.item.json;\nreturn [{ json: { deadLetter: true, workflowName: execution.workflow?.name ?? 'unknown', errorMessage: execution.execution?.error?.message ?? 'unknown error', timestamp: new Date().toISOString() } }];" },
+      "id": "f8a1c3d5-9f2b-4e7a-b6d0-1c3e5f7a9b2f",
+      "name": "Dead Letter Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 520]
     }
   ],
   "connections": {
@@ -66,8 +82,9 @@
     "Register Delivery In Core": { "main": [[{ "node": "Drop Duplicate Delivery", "type": "main", "index": 0 }]] },
     "Drop Duplicate Delivery": { "main": [[{ "node": "Mailpit Notification", "type": "main", "index": 0 }]] },
     "Mailpit Notification": { "main": [[{ "node": "Build Signed Acknowledgement", "type": "main", "index": 0 }]] },
-    "Build Signed Acknowledgement": { "main": [[{ "node": "Acknowledge Core Incident", "type": "main", "index": 0 }]] }
+    "Build Signed Acknowledgement": { "main": [[{ "node": "Acknowledge Core Incident", "type": "main", "index": 0 }]] },
+    "Error Handler": { "main": [[{ "node": "Dead Letter Log", "type": "main", "index": 0 }]] }
   },
   "active": false,
-  "settings": { "executionOrder": "v1" }
+  "settings": { "executionOrder": "v1", "errorWorkflow": "" }
 }
