@@ -25,7 +25,10 @@
       "name": "Register Delivery In Core",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [680, 300]
+      "position": [680, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": { "jsCode": "const source = $('Verify HMAC and Replay Window').item.json;\nif ($json.duplicate === true) return [];\nreturn [{ json: source }];" },
@@ -41,7 +44,10 @@
       "name": "Mailpit Notification",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1120, 300]
+      "position": [1120, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": { "jsCode": "const crypto = require('crypto');\nconst secret = $vars.N8N_WEBHOOK_SECRET;\nif (!secret) throw new Error('N8N_WEBHOOK_SECRET variable is not configured');\nconst source = $('Verify HMAC and Replay Window').item.json;\nconst payloadBase64 = Buffer.from(JSON.stringify({ incidentId: source.payload.incidentId, status: 'delivered' })).toString('base64url');\nconst timestamp = Math.floor(Date.now() / 1000);\nconst nonce = crypto.randomBytes(16).toString('hex');\nconst signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${nonce}.${payloadBase64}`).digest('hex');\nreturn [{ json: { deliveryId: source.deliveryId, timestamp, nonce, payloadBase64, signature, payload: { incidentId: source.payload.incidentId, status: 'delivered' } } }];" },
@@ -57,7 +63,10 @@
       "name": "Acknowledge Core Incident",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1560, 300]
+      "position": [1560, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {},
