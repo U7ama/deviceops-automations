@@ -17,6 +17,16 @@ The exported workflow is an importable contract, not a hosted production service
 
 For the local Compose stack, set the same secret in `N8N_WEBHOOK_SECRET` before starting n8n, then create `N8N_WEBHOOK_SECRET`, `DEVICEOPS_CORE_URL`, `MAILPIT_API_URL`, `ALERT_FROM`, and `ALERT_RECIPIENT` as n8n project variables or through deployment automation. The workflow intentionally has no URL, recipient, sender, or secret fallbacks: missing variables must fail configuration rather than silently route to a local address. The signed envelope must use a UUID `deliveryId`, a timestamp within five minutes, a unique nonce, and an HMAC-SHA256 signature over `timestamp.nonce.payloadBase64`. Test the production webhook URL only after the workflow is active; the test URL is a separate n8n endpoint.
 
+## Visual Architecture & Execution Evidence
+
+| n8n Incident Notification Canvas | Execution Trace & Dead-Letter Log |
+| :---: | :---: |
+| ![n8n Canvas](docs/screenshots/01-n8n-workflow-canvas.png) | ![Execution Trace](docs/screenshots/02-n8n-workflow-execution-trace.png) |
+
+| Mailpit Incident Alert Dispatch | n8n Workflows Registry |
+| :---: | :---: |
+| ![Mailpit Alert](docs/screenshots/03-mailpit-incident-dispatch-email.png) | ![Workflows Registry](docs/screenshots/04-n8n-workflows-list.png) |
+
 ## Contract Synchronization
 
 ```bash
