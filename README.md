@@ -1,6 +1,6 @@
 # DeviceOps Automations — Version-Controlled n8n Incident Workflows
 
-Version-controlled n8n integration adapter for the DeviceOps synthetic reference implementation. Core authorization, incident state, idempotency, and audit truth remain in `deviceops-ai-copilot`.
+Version-controlled n8n integration adapter for the DeviceOps AI Copilot platform. Core authorization, incident state, idempotency, and audit truth remain in `deviceops-ai-copilot`.
 
 > Source available for portfolio review; all rights reserved; no permission to reuse or redistribute.
 
