@@ -3,3 +3,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+*.tsbuildinfo
+*Zone.Identifier
+.DS_Store
+Thumbs.db
