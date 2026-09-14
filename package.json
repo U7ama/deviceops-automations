@@ -2,6 +2,7 @@
   "name": "deviceops-automations",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "contracts:check": "node --import tsx scripts/check-contract-sync.ts",

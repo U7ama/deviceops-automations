@@ -1,6 +1,6 @@
-# DeviceOps Automations — Version-Controlled n8n Incident Workflows
+# DeviceOps Automations — Incident Resolution & Orchestration Workflows
 
-Version-controlled n8n integration adapter for the DeviceOps AI Copilot platform. Core authorization, incident state, idempotency, and audit truth remain in `deviceops-ai-copilot`.
+Version-controlled n8n integration adapter for the DeviceOps autonomous operations & incident resolution platform. Core authorization, incident state, idempotency, and audit truth remain in `deviceops-ai-copilot`.
 
 > Source available for portfolio review; all rights reserved; no permission to reuse or redistribute.
 
@@ -40,3 +40,15 @@ npm run verify
 ```
 
 Validates that `contracts/contract-manifest.json` is present and matches the core contract version hash.
+
+## Autonomous operations notification (v2)
+
+`workflows/operations_notification.json` is the new local hackathon flow: a signed dispatch capability is claimed atomically in the core, sent to local Mailpit, then acknowledged using a signed callback. Import and activate it only in the local n8n instance described by the core repository's `docs/HACKATHON.md`. The existing `incident_notification.json` and screenshots above describe the legacy v1 flow.
+
+Required n8n environment variables: `DEVICEOPS_CORE_URL`, `MAILPIT_API_URL`, `N8N_WEBHOOK_SECRET` (at least 32 characters), `ALERT_FROM`, and `ALERT_RECIPIENT`. The local Compose profile supplies `.test` recipients and enables `crypto` for the acknowledgement Code node. No external email is sent by the supplied profile.
+
+HTTP webhook acceptance is not delivery. Core notification states distinguish acceptance, delivery in progress, delivered, retries, and unknown outcomes. Duplicate claims do not send twice. If a send succeeds but its acknowledgement is lost, inspect Mailpit and reconcile; automatic SMTP replay is deliberately blocked. Notifications never authorize device commands.
+
+This companion is MIT licensed; see `LICENSE`. Run `npm run verify` for the existing shared contract check; the core also includes `scripts/ops-notifications-integration.mts` for v2 signing and database delivery-state checks.
+
+Local n8n 2.0 note: after importing `workflows/operations_notification.json`, save a small node edit in the editor before publishing; CLI import alone does not create the required workflow history. Core claim/ack requests allow 30 seconds for a development cold start. The September 7 local Docker check verified one Mailpit message and a signed acknowledgement; no external recipient was used.

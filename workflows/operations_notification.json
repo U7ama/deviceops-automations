@@ -1,0 +1,171 @@
+{
+  "name": "DeviceOps v2 Operations Notification",
+  "nodes": [
+    {
+      "id": "5c738c22-a125-4259-a148-b3b0e055d751",
+      "name": "Operations webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "operations-envelope",
+        "responseMode": "onReceived"
+      },
+      "webhookId": "a7c5de29-f2e5-4952-ae28-92c673f40924"
+    },
+    {
+      "id": "4a6a9e98-8c30-4e40-b895-de6142e7fa38",
+      "name": "Claim delivery in core",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        430,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DEVICEOPS_CORE_URL }}/api/v2/internal/notifications/claim",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {
+          "timeout": 30000
+        }
+      }
+    },
+    {
+      "id": "1c93a62b-8b74-4883-b521-59b1f423d273",
+      "name": "Drop duplicate claims",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        650,
+        300
+      ],
+      "parameters": {
+        "jsCode": "if ($json.duplicate === true) return [];\nif (!$json.deliveryId || !$json.payload?.incidentId) throw new Error('Missing core-validated delivery');\nreturn [{ json: $json }];"
+      }
+    },
+    {
+      "id": "a4eb0c86-458a-44ec-89bf-9315c6e39f0a",
+      "name": "Deliver to local Mailpit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        890,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MAILPIT_API_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { From: { Email: $env.ALERT_FROM }, To: [{ Email: $env.ALERT_RECIPIENT }], Subject: '[DeviceOps] ' + $json.payload.summary, Text: 'Incident ' + $json.payload.incidentId + '\\nStatus: ' + $json.payload.status + '\\n\\n' + JSON.stringify($json.payload.report, null, 2) } }}",
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "98ba62cd-7639-4721-ac6d-b9375e701e11",
+      "name": "Sign delivery acknowledgement",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1130,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst source = $('Drop duplicate claims').item.json;\nconst secret = $env.N8N_WEBHOOK_SECRET;\nif (!secret || secret.length < 32) throw new Error('Missing signing secret');\nconst timestamp = Math.floor(Date.now() / 1000);\nconst nonce = crypto.randomBytes(16).toString('hex');\nconst payloadBase64 = Buffer.from(JSON.stringify({purpose:'ack',deliveryId:source.deliveryId,attempt:source.attempt,status:'delivered'})).toString('base64url');\nconst signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${nonce}.${payloadBase64}`).digest('hex');\nreturn [{json:{timestamp,nonce,payloadBase64,signature}}];"
+      }
+    },
+    {
+      "id": "249f5c1e-f2fa-4e3d-8291-fc6b6b4add07",
+      "name": "Acknowledge core",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1370,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DEVICEOPS_CORE_URL }}/api/v2/internal/notifications/ack",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "connections": {
+    "Operations webhook": {
+      "main": [
+        [
+          {
+            "node": "Claim delivery in core",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim delivery in core": {
+      "main": [
+        [
+          {
+            "node": "Drop duplicate claims",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drop duplicate claims": {
+      "main": [
+        [
+          {
+            "node": "Deliver to local Mailpit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deliver to local Mailpit": {
+      "main": [
+        [
+          {
+            "node": "Sign delivery acknowledgement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign delivery acknowledgement": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge core",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
