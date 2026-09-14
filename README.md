@@ -2,7 +2,7 @@
 
 Version-controlled n8n integration adapter for the DeviceOps autonomous operations & incident resolution platform. Core authorization, incident state, idempotency, and audit truth remain in `deviceops-ai-copilot`.
 
-> Source available for portfolio review; all rights reserved; no permission to reuse or redistribute.
+> Open-source companion to the DeviceOps hackathon project, licensed under the [MIT License](LICENSE). Use, modification, and redistribution are permitted under its terms. Third-party dependencies retain their own licenses.
 
 ## Overview
 
