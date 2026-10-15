@@ -2,7 +2,7 @@
 
 Version-controlled n8n integration adapter for the DeviceOps autonomous operations & incident resolution platform. Core authorization, incident state, idempotency, and audit truth remain in `deviceops-ai-copilot`.
 
-> Open-source companion to the DeviceOps hackathon project, licensed under the [MIT License](LICENSE). Use, modification, and redistribution are permitted under its terms. Third-party dependencies retain their own licenses.
+> Open-source companion to the DeviceOps operations platform, licensed under the [MIT License](LICENSE). Use, modification, and redistribution are permitted under its terms. Third-party dependencies retain their own licenses.
 
 ## Overview
 
@@ -43,7 +43,7 @@ Validates that `contracts/contract-manifest.json` is present and matches the cor
 
 ## Autonomous operations notification (v2)
 
-`workflows/operations_notification.json` is the new local hackathon flow: a signed dispatch capability is claimed atomically in the core, sent to local Mailpit, then acknowledged using a signed callback. Import and activate it only in the local n8n instance described by the core repository's `docs/HACKATHON.md`. The existing `incident_notification.json` and screenshots above describe the legacy v1 flow.
+`workflows/operations_notification.json` is the local operations notification flow: a signed dispatch capability is claimed atomically in the core, sent to local Mailpit, then acknowledged using a signed callback. Import and activate it only in the local n8n instance described by the core repository's `docs/OPERATIONS_RUNBOOK.md`. The existing `incident_notification.json` and screenshots above describe the legacy v1 flow.
 
 Required n8n environment variables: `DEVICEOPS_CORE_URL`, `MAILPIT_API_URL`, `N8N_WEBHOOK_SECRET` (at least 32 characters), `ALERT_FROM`, and `ALERT_RECIPIENT`. The local Compose profile supplies `.test` recipients and enables `crypto` for the acknowledgement Code node. No external email is sent by the supplied profile.
 
